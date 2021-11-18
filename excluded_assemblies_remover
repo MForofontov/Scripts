@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 16 14:12:35 2021
+
+@author: mykyta
+"""
+
+import os
+import shutil
+import pandas as pd
+import csv
+import sys
+import argparse
+
+    
+def main(i_path,o_path,table_path,maximum_contigs, minimum_number_of_bases,
+         maximum_number_of_bases, minimum_gc_content, maximum_gc_content,
+         remove_none_emmtype, remove_none_ST):
+    
+    if not os.path.isdir(o_path):
+        os.mkdir(o_path) 
+    
+    table = pd.read_excel(table_path)
+    
+    remove_list = []
+    
+    
+    for i in range(0,len(table)):
+        
+        for column_name in ["excluded","Number of contigs",
+                            "emm_type","ST",
+                            "Total assembly length","GC content",
+                            "excluded","File_name"]:
+            
+            if column_name not in table.columns:
+            
+                print("no column {}".format(column_name))
+                sys.exit()
+            
+        if table.iloc[i]["excluded"] == "yes":
+            remove_list.append(table.iloc[i]["File_name"])
+        
+        elif table.iloc[i]["Number of contigs"] > maximum_contigs:
+            remove_list.append(table.iloc[i]["File_name"])
+            
+        elif table.iloc[i]["Total assembly length"] > maximum_number_of_bases:
+            remove_list.append(table.iloc[i]["File_name"])
+            
+        elif table.iloc[i]["Total assembly length"] < minimum_number_of_bases:
+            remove_list.append(table.iloc[i]["File_name"])
+            
+        elif remove_none_emmtype == "yes" and table.iloc[i]["emm_type"] == "-":
+            remove_list.append(table.iloc[i]["File_name"])
+            
+        elif table.iloc[i]["GC content"] > maximum_gc_content:
+            remove_list.append(table.iloc[i]["File_name"])
+        
+        elif table.iloc[i]["GC content"] < minimum_gc_content:
+            remove_list.append(table.iloc[i]["File_name"])
+            
+            
+    for assembly in remove_list:
+        if os.path.exists(os.path.join(i_path,assembly)):
+            shutil.move(os.path.join(i_path,assembly),o_path)
+            
+    with open(os.path.join(o_path,"assemblies_removed.csv"),"w") as f:
+        
+        out_file = csv.writer(f)
+        
+        for val in remove_list:
+            out_file.writerow([val])
+
+        
+def parse_arguments():
+
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    parser.add_argument('-i', type=str, required=True,
+                        dest='i_path',
+                        help='folder with assemblies')
+
+    parser.add_argument('-o', type=str, required=True,
+                        dest='o_path',
+                        help='folder where to move excluded assemblies')
+    
+    parser.add_argument('-t', type=str, required=True,
+                        dest='table_path',
+                        help='excel table with statistics')
+    
+    parser.add_argument('--nr_contigs', type=int, required=False, 
+                        dest='maximum_contigs',
+                        default=350, 
+                        help='Number of contigs allowed for each assembly.')
+
+    parser.add_argument('--min_bps', type=int, required=False, 
+                        dest='minimum_number_of_bases',
+                        default=1, 
+                        help='Minimum number of total bases accepted for a genome/assembly.')
+
+    parser.add_argument('--max_bps', type=int, required=False, 
+                        dest='maximum_number_of_bases',
+                        default=9999999999999999, 
+                        help='Maximum number of total bases accepted for a genome/assembly.')
+
+    parser.add_argument('--min_gc', type=float, required=False, 
+                        dest='minimum_gc_content',
+                        default=0.0, 
+                        help='Minimum GC content value.')
+
+    parser.add_argument('--max_gc', type=float, required=False, 
+                        dest='maximum_gc_content',
+                        default=1.0, 
+                        help='Minimum GC content value.')
+    
+    parser.add_argument('--remove_none_emmtype', type=str, required=False, 
+                        dest='remove_none_emmtype',
+                        default="no", 
+                        help='Maintain("no") or remove("yes") assemblies with absent emmtype ')
+    
+    parser.add_argument('--remove_none_ST', type=str, required=False, 
+                        dest='remove_none_ST',
+                        default="no", 
+                        help='Maintain("no") or remove("yes") assemblies with absent ST')
+
+    args = parser.parse_args()
+
+    return args
+
+
+if __name__ == '__main__':
+
+    args = parse_arguments()
+
+    main(**vars(args))
+    
+    
+        
