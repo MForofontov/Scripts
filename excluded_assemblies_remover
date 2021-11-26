@@ -29,71 +29,124 @@ import argparse
     
 def main(i_path,o_path,table_path,maximum_contigs, minimum_number_of_bases,
          maximum_number_of_bases, minimum_gc_content, maximum_gc_content,
-         remove_none_emmtype, remove_none_st):
+         remove_none_sero, remove_none_st, organism_name):
     
     if not os.path.isdir(o_path):
         os.mkdir(o_path) 
     
-    table = pd.read_excel(table_path)
-    
+    print("reading file...")
+
+    table = pd.read_excel(table_path,na_filter=False)
+    table.convert_dtypes()
+    print(table.dtypes)
     remove_list = []
-    
+
     """
     Verify each parameter, and exclude if assembly doesn't pass.
 
     """
+
+    print("verifying assemblies...")
+
     for i in range(0,len(table)):
-        
         for column_name in ["excluded","Number of contigs",
-                            "emm_type","ST",
+                            "sero","ST",
                             "Total assembly length","GC content",
-                            "excluded","File_name"]:
+                            "excluded","File_name", "organism_name", "observation"]:
             
             if column_name not in table.columns:
             
                 print("no column {}".format(column_name))
                 sys.exit()
         
-        elif table.iloc[i]["Number of contigs"] > maximum_contigs:
+        if table.iloc[i]["Number of contigs"] > maximum_contigs:
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "high number of contigs"
             
         elif table.iloc[i]["Total assembly length"] > maximum_number_of_bases:
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "high amount of bp"            
             
         elif table.iloc[i]["Total assembly length"] < minimum_number_of_bases:
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "low amount of bp" 
             
-        elif remove_none_emmtype == "yes" and table.iloc[i]["emm_type"] == "-":
+        elif remove_none_sero == "yes" and table.iloc[i]["sero"] == "-":
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "no serotype" 
 
         elif remove_none_st == "yes" and table.iloc[i]["ST"] == "-":
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "no ST" 
+
+        elif organism_name != "":
+            if organism_name != table.iloc[i]["organism_name"]:
+                remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "different organism" 
             
-        elif table.iloc[i]["GC content"] > maximum_gc_content:
+        elif float(table.iloc[i]["GC content"]) > maximum_gc_content:
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "high gc content" 
         
-        elif table.iloc[i]["GC content"] < minimum_gc_content:
+        elif float(table.iloc[i]["GC content"]) < minimum_gc_content:
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "low gc content" 
 
         elif table.iloc[i]["excluded"] == "yes":
             remove_list.append(table.iloc[i]["File_name"])
+
+            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+
+            if table.iloc[i]["observation"] == "":
+                table.iat[i,table.columns.get_loc("observation")]  = "other reason" 
             
-            
+
+    print("moving assemblies...")
+
     for assembly in remove_list:
         if os.path.exists(os.path.join(i_path,assembly)):
             shutil.move(os.path.join(i_path,assembly),o_path)
 
-
     """
     write the name of file that were excluded from assemblies folder.
     
-    """       
-    with open(os.path.join(o_path,"assemblies_removed.csv"),"w") as f:
-        
-        out_file = csv.writer(f)
-        
-        for val in remove_list:
-            out_file.writerow([val])
+    """
+
+    print("writing updated report...")
+
+    table.to_excel(os.path.join(o_path,"assemblies_removed_file.xlsx"), index = False)
 
         
 def parse_arguments():
@@ -138,8 +191,8 @@ def parse_arguments():
                         default=1.0, 
                         help='Minimum GC content value.')
     
-    parser.add_argument('--remove_none_emmtype', type=str, required=False, 
-                        dest='remove_none_emmtype',
+    parser.add_argument('--remove_none_sero', type=str, required=False, 
+                        dest='remove_none_sero',
                         default="no", 
                         help='Maintain("no") or remove("yes") assemblies with absent emmtype ')
     
@@ -147,6 +200,11 @@ def parse_arguments():
                         dest='remove_none_st',
                         default="no", 
                         help='Maintain("no") or remove("yes") assemblies with absent ST')
+
+    parser.add_argument('--specie', type=str, required=False, 
+                        dest='organism_name',
+                        default="", 
+                        help='specie name as in mlst report')
 
     args = parser.parse_args()
 
