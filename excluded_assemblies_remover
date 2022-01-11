@@ -22,7 +22,6 @@ set by users input.
 import os
 import shutil
 import pandas as pd
-import csv
 import sys
 import argparse
 
@@ -38,7 +37,6 @@ def main(i_path,o_path,table_path,maximum_contigs, minimum_number_of_bases,
 
     table = pd.read_excel(table_path,na_filter=False)
     table.convert_dtypes()
-    print(table.dtypes)
     remove_list = []
 
     """
@@ -50,7 +48,7 @@ def main(i_path,o_path,table_path,maximum_contigs, minimum_number_of_bases,
 
     for i in range(0,len(table)):
         for column_name in ["excluded","Number of contigs",
-                            "sero","ST",
+                            "serotype","ST",
                             "Total assembly length","GC content",
                             "excluded","File_name", "organism_name", "observation"]:
             
@@ -83,7 +81,7 @@ def main(i_path,o_path,table_path,maximum_contigs, minimum_number_of_bases,
             if table.iloc[i]["observation"] == "":
                 table.iat[i,table.columns.get_loc("observation")]  = "low amount of bp" 
             
-        elif remove_none_sero == "yes" and table.iloc[i]["sero"] == "-":
+        elif remove_none_sero == "yes" and table.iloc[i]["serotype"] == "-":
             remove_list.append(table.iloc[i]["File_name"])
 
             table.iat[i,table.columns.get_loc("excluded")] = "yes"
@@ -103,10 +101,10 @@ def main(i_path,o_path,table_path,maximum_contigs, minimum_number_of_bases,
             if organism_name != table.iloc[i]["organism_name"]:
                 remove_list.append(table.iloc[i]["File_name"])
 
-            table.iat[i,table.columns.get_loc("excluded")] = "yes"
+                table.iat[i,table.columns.get_loc("excluded")] = "yes"
 
-            if table.iloc[i]["observation"] == "":
-                table.iat[i,table.columns.get_loc("observation")]  = "different organism" 
+                if table.iloc[i]["observation"] == "":
+                    table.iat[i,table.columns.get_loc("observation")]  = "different organism" 
             
         elif float(table.iloc[i]["GC content"]) > maximum_gc_content:
             remove_list.append(table.iloc[i]["File_name"])
@@ -168,7 +166,7 @@ def parse_arguments():
     
     parser.add_argument('--nr_contigs', type=int, required=False, 
                         dest='maximum_contigs',
-                        default=350, 
+                        default=999999, 
                         help='Number of contigs allowed for each assembly.')
 
     parser.add_argument('--min_bps', type=int, required=False, 

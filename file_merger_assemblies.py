@@ -31,11 +31,9 @@ def main(mlst_tsv, sero_tsv, statistics_file, out_path):
     
     out_table["serotype"] = sero_table.iloc[:,2]
     
-    out_table["ST"] = mlst_table.iloc[:,3]
+    out_table["ST"] = mlst_table.iloc[:,2]
     
     del stat_table["Sample"]
-
-    del stat_table["Result"]
     
     out_table = out_table.join(stat_table)
 
