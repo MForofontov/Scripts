@@ -68,21 +68,35 @@ def loadGroups(filename):
     
     with open(filename, 'r') as groups:        
         reader = list(zip(*csv.reader(groups, delimiter='\t')))        
-        
+
+        if len(reader) == 1:
+
+            for i in range(1,len(reader[0])):
+
+                new_group = list(0 for a in range(0,len(reader[0])-2))
+
+                reader.append(new_group)
+
+                reader[i].insert(0,reader[0][i])
+
+                reader[i].insert(i,1)
+
         for group in range(1, len(reader)):            
             p = dict(list(zip(reader[0], reader[group])))
 
             if "" in p:                
                 name_trait = p[""]                
                 del p[""]            
+            
             elif "Name" in p:                
-                name_trait = p["name"]                
+                name_trait = p["Name"]                
                 del p["Name"]            
+
             else:                
                 sys.exit("Make sure the top-left cell in the traits file is either empty or 'Name'.")            
-            
+
             for key, value in list(p.items()):                
-                if value == '0':                    
+                if int(value) == 0:                    
                     del p[key]            
             
             group_dic[name_trait] = list(p.keys())    
@@ -113,29 +127,37 @@ def loadProfile(filename, dataStructure):
             profile = line[1:]  # has the same order as in genes            
             
             for key, value in list(dataStructure.items()):                
+                
                 if strain in value:                   
                     group = key                    
                     skipIsolate = False                    
                     break                
+                
                 else:                    
                     pass            
             
             if not skipIsolate:                
+                
                 for i in range(0, len(genes)):                    
+                    
                     if genes[i] not in list(profileDic.keys()):                        
                         temp = {}                        
                         temp[group] = [profile[i]]                        
                         profileDic[genes[i]] = temp                    
+                    
                     else:                        
                         temp = profileDic[genes[i]]                       
                         
                         if group in list(temp.keys()):                            
                             temp[group].append(profile[i])                        
+                        
                         else:                            
                             temp[group] = [profile[i]]                        
                             profileDic[genes[i]] = temp            
+            
             else:                
                 pass    
+    
     print(("profile size: " + str(len(profileDic))))        
     
     return profileDic
@@ -145,10 +167,12 @@ def proCompare(dataStructure, key1, key2,absent):
 
     shared_allele = []    
     exclusive_alleles = []
-    allele_id = []   
+    allele_id_shared = []
+    allele_id_exclusive = []
     # performing counts
 
     for gene, value in list(dataStructure.items()):
+
         if absent in dataStructure[gene][key1] or absent in dataStructure[gene][key2]:			
             pass
 
@@ -164,10 +188,11 @@ def proCompare(dataStructure, key1, key2,absent):
             
             if common_alleles != 0:            
                 shared_allele.append(gene)        
-                allele_id.append(group_one.intersection(group_two))
+                allele_id_shared.append(group_one.intersection(group_two))
 
             else:            
-                exclusive_alleles.append(gene)        
+                exclusive_alleles.append(gene)
+                allele_id_exclusive.append(group_one.difference(group_two))        
                 
             # Alleles present only in group one        
             group_one_diff = len(group_one.difference(group_two))        
@@ -180,8 +205,8 @@ def proCompare(dataStructure, key1, key2,absent):
     print(('\n Comparing: ' + str(key1) + ' + ' + str(key2)))    
     print(("\tLoci with shared alleles: " + str(len(shared_allele))))    
     print(("\tLoci with exclusive alleles: " + str(len(exclusive_alleles))))    
-        
-    return dataStructure, shared_allele, exclusive_alleles,allele_id
+    
+    return dataStructure, shared_allele, exclusive_alleles,allele_id_shared,allele_id_exclusive
     
 def main(profile,group,absent,outdir):       
     
@@ -197,18 +222,31 @@ def main(profile,group,absent,outdir):
     profiles = loadProfile(profile, groups_dic)    
     
     # performs profile comparison for two groups at a time     
-    for a, b in itertools.combinations(groups_list, 2):        
-        _, shared_allele, exclusive_alleles,allele_id = proCompare(profiles, a, b,absent)        
+    for a, b in itertools.combinations(groups_list, 2):
+
+        _, shared_allele, exclusive_alleles,allele_id_shared,allele_id_exclusive = proCompare(profiles, a, b,absent)        
     
         with open(os.path.join(outdir,                               
-                                '{type}_{a}_{b}.txt'.format(type='shared', a=a, b=b)),'w+') as writer:            
+                                '{type}_{a}_{b}.txt'.format(type='shared', a=a, b=b)),'w+') as writer:
+
             for index,i in enumerate(shared_allele):
                 writer.writelines(i+'\n')
-                writer.writelines("{}\n".format(str(allele_id[index]).replace("'","")))
+                writer.writelines("{}\n".format(str(allele_id_shared[index]).replace("'","")))
         
         with open(os.path.join(outdir,                               
-                                '{type}_{a}_{b}.txt'.format(type='exclusive', a=a, b=b)),'w+') as writer:            
-            writer.write('\n'.join(exclusive_alleles) + '\n')    
+                                '{type}_{a}_{b}.txt'.format(type='exclusive', a=a, b=b)),'w+') as writer:
+
+            for index,i in enumerate(exclusive_alleles):
+                writer.writelines(i+'\n')
+                writer.writelines("{}\n".format(str(allele_id_exclusive[index]).replace("'",""))) 
+
+        with open(os.path.join(outdir,                               
+                                'stats_procompare.tsv'),'a') as writer:
+    
+            writer.writelines('Comparing: ' + str(a) + ' + ' + str(b) + '\n')  
+            writer.writelines("Loci with shared alleles: " + str(len(shared_allele)) + '\n')   
+            writer.writelines("Loci with exclusive alleles: " + str(len(exclusive_alleles)) + '\n')
+                    
         
     print("\nFinished")    
     
