@@ -1,19 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name=sagalactiae
+#SBATCH --job-name=snippy
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --nodelist=compute-5
-#SBATCH --mem=60G
+#SBATCH --nodelist=compute-13
+#SBATCH --mem=80G
 #SBATCH --cpus-per-task=30
-#SBATCH --image=ummidock/chewbbaca:2.8.4-1
-#SBATCH --chdir=/mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/staphy/schema
+#SBATCH --chdir=/mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/fish/snippy_reads
 
-export GENOMES=/mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/staphy/all_assemblies_afterNexclusion
-export SCHEMA=/mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/staphy/schema/schema_seed
-
+export ref=/mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/fish/snippy_reads/reference/GCF_001275545.2.gbff
+export input=/mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/fish/reads_path.tsv
 
 
-time srun shifter chewBBACA.py AlleleCall -i $GENOMES -g $SCHEMA --cpu 30 -o BR_results --fr
+
+time srun apptainer run /mnt/beegfs/apptainer/images/snippy.sif snippy-multi $input $ref --cpus 30 > /mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/fish/snippy_reads/runme.sh
+
+sh /mnt/beegfs/scratch/ONEIDA/mykyta.forofontov/fish/snippy_reads/runme.sh
 
 echo "Statistics for job $SLURM_JOB_ID:"
 sacct --format="JOBID,Start,End,Elapsed,CPUTime,AveDiskRead,AveDiskWrite,MaxRSS" -j $SLURM_JOB_ID 
