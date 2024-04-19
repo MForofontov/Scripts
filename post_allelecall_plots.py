@@ -1,4 +1,5 @@
 """
+@author: mykyta
 Following script takes and allele call matrix and output several plots and relevant
 information about the allele call.
 
