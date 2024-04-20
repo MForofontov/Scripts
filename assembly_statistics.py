@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+@author: mykyta
+
 Purpose
 -------
 This script serves to analyse genome assemblies and create a report
