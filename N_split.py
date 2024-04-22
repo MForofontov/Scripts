@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+
+@author: mykyta
+
 Purpose
 -------
 This script serves to split assemblies by their consecutive missing data (N).
