@@ -1,5 +1,7 @@
 """
-This script separetes assemblies that are from refseq but also present in ena661k database, 
+Creator: Mykyta Forofontov
+
+This script separates assemblies that are from refseq but also present in ena661k database, 
 input for this scripts uses output of script entrez_id_fetcher.py
 """
 
